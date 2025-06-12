@@ -18,6 +18,12 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.androidgpsapp.ui.theme.AndroidGpsAppTheme
 import com.google.android.gms.location.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
 
@@ -26,6 +32,7 @@ class MainActivity : ComponentActivity() {
 
     private var latitude by mutableStateOf("Loading...")
     private var longitude by mutableStateOf("Loading...")
+    private val gpsTrail = mutableStateListOf<Pair<Double, Double>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,12 +40,23 @@ class MainActivity : ComponentActivity() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+        //locationCallback = object : LocationCallback() {
+        //    override fun onLocationResult(locationResult: LocationResult) {
+        //        locationResult.lastLocation?.let { location ->
+        //            latitude = location.latitude.toString()
+        //            longitude = location.longitude.toString()
+        //            Log.d("GPS", "Real-time → Lat: $latitude, Lon: $longitude")
+        //        }
+        //    }
+        //}
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 locationResult.lastLocation?.let { location ->
-                    latitude = location.latitude.toString()
-                    longitude = location.longitude.toString()
-                    Log.d("GPS", "Real-time → Lat: $latitude, Lon: $longitude")
+                    val lat = location.latitude
+                    val lon = location.longitude
+                    latitude  = lat.toString()
+                    longitude = lon.toString()
+                    gpsTrail.add(Pair(lat, lon))
                 }
             }
         }
@@ -48,9 +66,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             AndroidGpsAppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    LocationDisplay(
-                        latitude = latitude,
-                        longitude = longitude,
+                    //LocationDisplay(
+                        //latitude = latitude,
+                        //longitude = longitude,
+                        //modifier = Modifier.padding(innerPadding)
+                    //)
+                    LocationCanvas(
+                        gpsTrail = gpsTrail,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -96,6 +118,47 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+}
+
+@Composable
+fun LocationCanvas(
+    gpsTrail: List<Pair<Double, Double>>,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier.fillMaxSize()) {
+        if (gpsTrail.size < 2) return@Canvas
+
+        // Get bounds
+        val minLat = gpsTrail.minOf { it.first }
+        val maxLat = gpsTrail.maxOf { it.first }
+        val minLon = gpsTrail.minOf { it.second }
+        val maxLon = gpsTrail.maxOf { it.second }
+
+        val scaleX = size.width / (maxLon - minLon)
+        val scaleY = size.height / (maxLat - minLat)
+
+        // Build the path
+        val path = Path().apply {
+            val first = gpsTrail.first()
+            moveTo(
+                ((first.second - minLon) * scaleX).toFloat(),
+                size.height - ((first.first - minLat) * scaleY).toFloat()
+            )
+
+            for (point in gpsTrail.drop(1)) {
+                lineTo(
+                    ((point.second - minLon) * scaleX).toFloat(),
+                    size.height - ((point.first - minLat) * scaleY).toFloat()
+                )
+            }
+        }
+
+        drawPath(
+            path = path,
+            color = Color.Black,
+            style = Stroke(width = 4f)
+        )
     }
 }
 
