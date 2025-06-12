@@ -11,24 +11,37 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.androidgpsapp.ui.theme.AndroidGpsAppTheme
-import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.*
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationCallback: LocationCallback
+
     private var latitude by mutableStateOf("Loading...")
     private var longitude by mutableStateOf("Loading...")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                locationResult.lastLocation?.let { location ->
+                    latitude = location.latitude.toString()
+                    longitude = location.longitude.toString()
+                    Log.d("GPS", "Real-time → Lat: $latitude, Lon: $longitude")
+                }
+            }
+        }
 
         checkLocationPermission()
 
@@ -55,12 +68,15 @@ class MainActivity : ComponentActivity() {
                 1
             )
         } else {
-            getLocation()
+            startLocationUpdates()
         }
     }
 
-    private fun getLocation() {
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+    private fun startLocationUpdates() {
+        val locationRequest = LocationRequest.Builder(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            3000L // 3 seconds between updates
+        ).setMinUpdateIntervalMillis(1500L).build()
 
         if (ActivityCompat.checkSelfPermission(
                 this,
@@ -70,18 +86,16 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        fusedLocationClient.lastLocation.addOnSuccessListener { location: android.location.Location? ->
-            if (location != null) {
-                latitude = location.latitude.toString()
-                longitude = location.longitude.toString()
-                Log.d("GPS", "Latitude: ${location.latitude}, Longitude: ${location.longitude}")
-            } else {
-                latitude = "Unavailable"
-                longitude = "Unavailable"
-                Log.d("GPS", "Location is null")
-            }
-        }
+        fusedLocationClient.requestLocationUpdates(
+            locationRequest,
+            locationCallback,
+            mainLooper
+        )
+    }
 
+    override fun onStop() {
+        super.onStop()
+        fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 }
 
