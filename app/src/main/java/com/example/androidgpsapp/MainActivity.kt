@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 
+import com.example.androidgpsapp.KalmanFilter
 
 
 class MainActivity : ComponentActivity() {
@@ -39,6 +40,9 @@ class MainActivity : ComponentActivity() {
 
     private var zoomLevel by mutableFloatStateOf(1.0f)
 
+    private var kalmanLat: KalmanFilter? = null
+    private var kalmanLon: KalmanFilter? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -48,11 +52,20 @@ class MainActivity : ComponentActivity() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 locationResult.lastLocation?.let { location ->
-                    val lat = location.latitude
-                    val lon = location.longitude
-                    latitude  = lat.toString()
-                    longitude = lon.toString()
-                    gpsTrail.add(Pair(lat, lon))
+                    val rawLat = location.latitude.toFloat()
+                    val rawLon = location.longitude.toFloat()
+
+                    if (kalmanLat == null || kalmanLon == null) {
+                        kalmanLat = KalmanFilter(0.0001f, 0.0005f, rawLat)
+                        kalmanLon = KalmanFilter(0.0001f, 0.0005f, rawLon)
+                    }
+
+                    val filteredLat = kalmanLat!!.update(rawLat)
+                    val filteredLon = kalmanLon!!.update(rawLon)
+
+                    latitude  = filteredLat.toString()
+                    longitude = filteredLon.toString()
+                    gpsTrail.add(Pair(filteredLat.toDouble(), filteredLon.toDouble()))
                 }
             }
         }
@@ -112,8 +125,8 @@ class MainActivity : ComponentActivity() {
     private fun startLocationUpdates() {
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
-            3000L // 3 seconds between updates
-        ).setMinUpdateIntervalMillis(1500L).build()
+            1000L // 3 seconds between updates
+        ).setMinUpdateIntervalMillis(500L).build()
 
         if (ActivityCompat.checkSelfPermission(
                 this,
