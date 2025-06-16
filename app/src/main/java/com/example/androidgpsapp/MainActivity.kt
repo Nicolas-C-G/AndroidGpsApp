@@ -29,7 +29,6 @@ import kotlin.math.sin
 import kotlin.math.cos
 import androidx.compose.ui.graphics.nativeCanvas
 
-
 class MainActivity : ComponentActivity() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -47,6 +46,10 @@ class MainActivity : ComponentActivity() {
 
     private var kalmanLat: KalmanFilter? = null
     private var kalmanLon: KalmanFilter? = null
+
+    private var isLoading by mutableStateOf(true)
+    private var hasResetTrail = true
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,7 +73,17 @@ class MainActivity : ComponentActivity() {
 
                     latitude = filteredLat.toString()
                     longitude = filteredLon.toString()
+
+                    // Add to trail
                     gpsTrail.add(Pair(filteredLat.toDouble(), filteredLon.toDouble()))
+
+                    // Update loading state
+                    isLoading = gpsTrail.size < 30
+
+                    if (hasResetTrail && gpsTrail.size >= 25){
+                        gpsTrail.clear()
+                        hasResetTrail = false
+                    }
                 }
             }
         }
@@ -81,32 +94,46 @@ class MainActivity : ComponentActivity() {
         setContent {
             AndroidGpsAppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                    ) {
-                        LocationCanvas(
-                            gpsTrail = gpsTrail,
-                            zoomLevel = zoomLevel,
-                            azimuth = azimuth
-                        )
-
-                        Column(
+                    if (isLoading) {
+                        // Show loading spinner
+                        Box(
                             modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(16.dp)
+                                .fillMaxSize()
+                                .padding(innerPadding),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Button(onClick = {
-                                zoomLevel = (zoomLevel * 1.2f).coerceIn(0.5f, 10f)
-                            }) {
-                                Text("+")
-                            }
+                            CircularProgressIndicator()
+                            Text("Waiting for GPS initialization...",
+                                modifier = Modifier.padding(top = 80.dp))
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                        ) {
+                            LocationCanvas(
+                                gpsTrail = gpsTrail,
+                                zoomLevel = zoomLevel,
+                                azimuth = azimuth
+                            )
 
-                            Button(onClick = {
-                                zoomLevel = (zoomLevel / 1.2f).coerceIn(0.5f, 10f)
-                            }) {
-                                Text("-")
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(16.dp)
+                            ) {
+                                Button(onClick = {
+                                    zoomLevel = (zoomLevel * 1.2f).coerceIn(0.5f, 10f)
+                                }) {
+                                    Text("+")
+                                }
+
+                                Button(onClick = {
+                                    zoomLevel = (zoomLevel / 1.2f).coerceIn(0.5f, 10f)
+                                }) {
+                                    Text("-")
+                                }
                             }
                         }
                     }
