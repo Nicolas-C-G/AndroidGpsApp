@@ -157,18 +157,24 @@ fun LocationCanvas(
         val scaleX = baseScaleX * zoomLevel
         val scaleY = baseScaleY * zoomLevel
 
+        val scaleWidth = (maxLon - minLon) * scaleX
+        val scaleHeight = (maxLat - minLat) * scaleY
+
+        val offsetX = (size.width - scaleWidth) / 2
+        val offsetY = (size.height - scaleHeight) / 2
+
         // Build the path
         val path = Path().apply {
             val first = gpsTrail.first()
             moveTo(
-                ((first.second - minLon) * scaleX).toFloat(),
-                size.height - ((first.first - minLat) * scaleY).toFloat()
+                (offsetX + ((first.second - minLon) * scaleX)).toFloat(),
+                size.height - (offsetY + ((first.first - minLat) * scaleY)).toFloat()
             )
 
             for (point in gpsTrail.drop(1)) {
                 lineTo(
-                    ((point.second - minLon) * scaleX).toFloat(),
-                    size.height - ((point.first - minLat) * scaleY).toFloat()
+                    (offsetX + ((point.second - minLon) * scaleX)).toFloat(),
+                    size.height - (offsetY + ((point.first - minLat) * scaleY)).toFloat()
                 )
             }
         }
