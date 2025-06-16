@@ -27,6 +27,7 @@ import com.example.androidgpsapp.ui.theme.AndroidGpsAppTheme
 import com.google.android.gms.location.*
 import kotlin.math.sin
 import kotlin.math.cos
+import androidx.compose.ui.graphics.nativeCanvas
 
 
 class MainActivity : ComponentActivity() {
@@ -261,6 +262,44 @@ fun LocationCanvas(
             radius = compassRadius,
             center = Offset(compassCenterX, compassCenterY),
             style = Stroke(width = 3f)
+        )
+
+        val textPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.BLACK
+            textSize = 24f
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+
+        // N
+        drawContext.canvas.nativeCanvas.drawText(
+            "N",
+            compassCenterX,
+            compassCenterY - compassRadius + 20f,
+            textPaint
+        )
+
+        // S
+        drawContext.canvas.nativeCanvas.drawText(
+            "S",
+            compassCenterX,
+            compassCenterY + compassRadius - 8f,
+            textPaint
+        )
+
+        // E
+        drawContext.canvas.nativeCanvas.drawText(
+            "E",
+            compassCenterX + compassRadius - 8f,
+            compassCenterY + 8f,
+            textPaint
+        )
+
+        // W
+        drawContext.canvas.nativeCanvas.drawText(
+            "W",
+            compassCenterX - compassRadius + 8f,
+            compassCenterY + 8f,
+            textPaint
         )
 
         // Draw compass arrow (North indicator)
