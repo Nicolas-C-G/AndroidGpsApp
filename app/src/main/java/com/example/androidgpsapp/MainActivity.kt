@@ -3,7 +3,6 @@ package com.example.androidgpsapp
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -19,11 +18,16 @@ import androidx.core.content.ContextCompat
 import com.example.androidgpsapp.ui.theme.AndroidGpsAppTheme
 import com.google.android.gms.location.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+
+
 
 class MainActivity : ComponentActivity() {
 
@@ -34,21 +38,14 @@ class MainActivity : ComponentActivity() {
     private var longitude by mutableStateOf("Loading...")
     private val gpsTrail = mutableStateListOf<Pair<Double, Double>>()
 
+    private var zoomLevel by mutableFloatStateOf(1.0f)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        //locationCallback = object : LocationCallback() {
-        //    override fun onLocationResult(locationResult: LocationResult) {
-        //        locationResult.lastLocation?.let { location ->
-        //            latitude = location.latitude.toString()
-        //            longitude = location.longitude.toString()
-        //            Log.d("GPS", "Real-time → Lat: $latitude, Lon: $longitude")
-        //        }
-        //    }
-        //}
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 locationResult.lastLocation?.let { location ->
@@ -66,18 +63,37 @@ class MainActivity : ComponentActivity() {
         setContent {
             AndroidGpsAppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    //LocationDisplay(
-                        //latitude = latitude,
-                        //longitude = longitude,
-                        //modifier = Modifier.padding(innerPadding)
-                    //)
-                    LocationCanvas(
-                        gpsTrail = gpsTrail,
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    androidx.compose.foundation.layout.Box(modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)) {
+
+                        LocationCanvas(
+                            gpsTrail = gpsTrail,
+                            zoomLevel = zoomLevel
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(16.dp)
+                        ){
+                            Button(onClick = {
+                                zoomLevel = (zoomLevel * 1.2f).coerceIn(0.5f, 10f)
+                            }) {
+                                Text("+")
+                            }
+
+                            Button(onClick = {
+                                zoomLevel = (zoomLevel / 1.2f ).coerceIn(0.5f, 10f)
+                            }) {
+                                Text("-")
+                            }
+                        }
+                    }
                 }
             }
         }
+
     }
 
     private fun checkLocationPermission() {
@@ -124,6 +140,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun LocationCanvas(
     gpsTrail: List<Pair<Double, Double>>,
+    zoomLevel: Float,
     modifier: Modifier = Modifier
 ) {
     Canvas(modifier = modifier.fillMaxSize()) {
@@ -135,8 +152,11 @@ fun LocationCanvas(
         val minLon = gpsTrail.minOf { it.second }
         val maxLon = gpsTrail.maxOf { it.second }
 
-        val scaleX = size.width / (maxLon - minLon)
-        val scaleY = size.height / (maxLat - minLat)
+        val baseScaleX = size.width / (maxLon - minLon)
+        val baseScaleY = size.height / (maxLat - minLat)
+
+        val scaleX = baseScaleX * zoomLevel
+        val scaleY = baseScaleY * zoomLevel
 
         // Build the path
         val path = Path().apply {
@@ -160,14 +180,6 @@ fun LocationCanvas(
             style = Stroke(width = 4f)
         )
     }
-}
-
-@Composable
-fun LocationDisplay(latitude: String, longitude: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Latitude: $latitude\nLongitude: $longitude",
-        modifier = modifier
-    )
 }
 
 @Composable
