@@ -50,6 +50,8 @@ class MainActivity : ComponentActivity() {
     private var isLoading by mutableStateOf(true)
     private var hasResetTrail = true
 
+    private var isRecording by mutableStateOf(true)
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,15 +76,17 @@ class MainActivity : ComponentActivity() {
                     latitude = filteredLat.toString()
                     longitude = filteredLon.toString()
 
-                    // Add to trail
-                    gpsTrail.add(Pair(filteredLat.toDouble(), filteredLon.toDouble()))
+                    if (isRecording){
+                        // Add to trail
+                        gpsTrail.add(Pair(filteredLat.toDouble(), filteredLon.toDouble()))
 
-                    // Update loading state
-                    isLoading = gpsTrail.size < 30
+                        // Update loading state
+                        isLoading = gpsTrail.size < 15
 
-                    if (hasResetTrail && gpsTrail.size >= 25){
-                        gpsTrail.clear()
-                        hasResetTrail = false
+                        if (hasResetTrail && gpsTrail.size >= 10){
+                            gpsTrail.clear()
+                            hasResetTrail = false
+                        }
                     }
                 }
             }
@@ -133,6 +137,20 @@ class MainActivity : ComponentActivity() {
                                     zoomLevel = (zoomLevel / 1.2f).coerceIn(0.5f, 10f)
                                 }) {
                                     Text("-")
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Button(onClick = {
+                                    isRecording = false
+                                }, enabled = isRecording) {
+                                    Text("Stop")
+                                }
+
+                                Button(onClick = {
+                                    isRecording = true
+                                }, enabled = !isRecording) {
+                                    Text("Resume")
                                 }
                             }
                         }
